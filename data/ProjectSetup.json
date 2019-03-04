@@ -1,0 +1,49 @@
+{
+  "Files":{
+    "Order":2,
+    "Values":[]
+  },
+  "Folders": {
+    "Order":1,
+    "Values":["TracMapData","Maps","Data","Config"]
+  },
+  "FileGeoDatabases":{
+    "Order": 4,
+    "Values": {
+      "planning": {"Name":"Planning.gdb","ImportXml":null},
+      "flightdata": {"Name":"FlightData.gdb","ImportXml":"Config\\total_gdb.xml"}
+    }
+  },
+  "CopyFiles":{
+    "Order":3,
+    "Values": {
+      "File1":{"FileSource":"E:\\Temp\\FlightLineTestFile.txt","FolderDestination":"Data"},
+      "File2": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\total_gdb.xml","FolderDestination":"Config"},
+      "File3": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\flight_path.xml","FolderDestination":"Config"},
+      "File4": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\helicopter_info.xml","FolderDestination":"Config"},
+      "File5": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\operation_start_end_time.xml","FolderDestination":"Config"},
+      "File6": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\sum_totals.xml","FolderDestination":"Config"},
+      "File7": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\total_lines.xml","FolderDestination":"Config"},
+      "File8": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\total_points.xml","FolderDestination":"Config"},
+      "File9": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\total_polygons.xml","FolderDestination":"Config"},
+      "File10": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\xml\\HelicopterMetadata.json","FolderDestination":"Config"},
+      "File11": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\flight_path.lyr", "FolderDestination":"Maps"},
+      "File12": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\total_lines.lyr", "FolderDestination":"Maps"},
+      "File13": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\total_points.lyr", "FolderDestination":"Maps"},
+      "File14": {"FileSource":"C:\\Users\\braaksman\\Downloads\\DOC\\TracMap Utilities\\Tracmap_utilities\\total_polygons.lyr", "FolderDestination":"Maps"}
+    }
+  },
+  "CopyFeatureClass":{
+    "Order": 10,
+    "Values": {
+      "AerialBoundary":{
+      "InputFeatureClass":"T:\\ArcGISLayerFiles\\DatabaseConnections\\PRODGIS-V - ahb_prod.sde\\ahb_prod.SDEADMIN.VM_REGION_NN\\ahb_prod.SDEADMIN.NN_Strata",
+      "OutputFeatureClass":"Planning.gdb\\AerialBoundary",
+      "WhereClause": "STRATA_NM LIKE 'Hatepe Sector 1A' AND FINYEAR LIKE '2017-2018'"}
+    }
+    },
+    "CopyRaster":{
+      "Order": 11,
+      "Values": {}
+    }
+  }

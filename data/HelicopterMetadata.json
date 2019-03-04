@@ -1,0 +1,18 @@
+{
+  "HelicopterTypes":[
+    "Unknown",
+    "Bell 206B Jetranger",
+    "Bell 206L-4 Longranger",
+    "Bell UH-1H Iroquois",
+    "Eurocopter AS350 B2",
+    "Eurocopter AS350 B3",
+    "Eurocopter AS350 BA",
+    "Eurocopter AS355 BA",
+    "Kawasaki BK117 B-2",
+    "McDonnel Douglas 500N",
+    "Robinson R44",
+    "Other"
+  ],
+  "BucketSizes":[0, 150, 300, 500, 600, 900, 1200],
+  "SowRates":[0, 1.0, 1.5, 2.0, 2.5, 3.0]
+}
