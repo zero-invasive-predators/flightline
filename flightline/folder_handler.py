@@ -10,7 +10,7 @@ class FolderHandler(object):
           self.settings_file = None
           self.__action__attributes__ = {}
 
-     def __create__file(self,new_file):
+     def __create_file__(self,new_file):
           """Creates a new file"""
           pass
 

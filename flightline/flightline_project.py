@@ -6,6 +6,7 @@ import json
 import arcpy
 import time
 from distutils import dir_util
+import uuid
 
 # Main class that manages the flightline project
 
@@ -19,12 +20,13 @@ class FlightlineProject(object):
         self.__load_project_folder__(project_folder)
         self.project_setup_json = None
         self.__projectconfig_name__ = "projectconfig.json"
-        self.__config_folder_name__ = "Config"
-        self.__data_folder_name__ = 'Data'
-        self.__maps_folder_name__ = "Maps"
-        self.__tracmap_data_folder_name__ = 'TracMapData'
+        self.__config_folder_name__ = "config"
+        self.__data_folder_name__ = 'data'
+        self.__maps_folder_name__ = "maps"
+        self.__tracmap_data_folder_name__ = 'raw_data'
         self.__config_attributes__ = {}
         self.__flight_data_gdb_name__ = "FlightData.gdb"
+        self.__planning_data_gdb_name__ = "Planning.gdb"
         self.__operation_times_table_name__ = "operation_start_end_time"
         self.__operation_start_times_table_field_name__ = "Operation_Start_Time"
         self.__helicopter_info_table_name__ = "helicopter_info"
@@ -38,6 +40,7 @@ class FlightlineProject(object):
         self.__total_polygons_fc_name__ = "total_polygons"
         self.__flight_path_fc_name__ = "flight_path"
         self.__sum_totals_table_name__ = "sum_totals"
+        self.__treatment_area_fc_name__ = "treatment_area"
         self.__tracmap_data_projection__ = 4326
         self.__block_field_name__ = 'HeliBlkNm'
 
@@ -45,7 +48,6 @@ class FlightlineProject(object):
         self.operation_start_datetime = None
         self.default_tracmap_data_projection = None
         self.default_tracmap_destination_parent_directory = None
-        self.treatment_area_featureclass = None
         self.sum_total_fieldnames = ['Machine','DL_Time','BlockName','Bucket','Hectares','Last_log_time',
                               'Nominal_Area','Real_Area','Distance_Travelled','Distance_spreading','Block_Area']
         self.flight_gdb_datasets = ['total_points','total_lines','total_polygons','flight_path','sum_totals','helicopter_info','operation_start_end_time']
@@ -55,6 +57,16 @@ class FlightlineProject(object):
         self.csv_summaries = []
         self.copied_tracmap_datasets = []
         self.flight_data_gdbs = [self.__flight_data_gdb_name__]
+        self.__instance_id__ = None
+        self.__set_unique_instance_id__()
+
+    def __set_unique_instance_id__(self):
+        """
+        Sets a unique id for the instance, this gets saved into the
+        projectconfig.json. This allows other processes to find unique
+        instances of flightline projects
+        """
+        self.__instance_id__ = uuid.uuid1().hex
 
     @property
     def flight_data_required_fc_populated(self):
@@ -62,7 +74,8 @@ class FlightlineProject(object):
         record_counts = []
         for i in self.required_flight_data_fcs:
             fc = os.path.join(self.flight_data_gdb_location, i)
-            record_counts.append(self.project_folder_handler.get_fc_record_count(fc))
+            if arcpy.Exists(fc):
+                record_counts.append(self.project_folder_handler.get_fc_record_count(fc))
         if sum(record_counts) > 0:
             return True
         else:
@@ -107,6 +120,9 @@ class FlightlineProject(object):
     @property
     def flight_path_fc(self):
         return os.path.join(self.flight_data_gdb_location, self.__flight_path_fc_name__)
+    @property
+    def treatment_area_fc(self):
+        return os.path.join(self.planning_data_gdb_location, self.__treatment_area_fc_name__)
     @property
     def total_points_layer(self):
         return os.path.join(self.maps_folder_location, self.__total_points_lyr_name__)
@@ -172,6 +188,9 @@ class FlightlineProject(object):
     @property
     def flight_data_gdb_location(self):
         return os.path.join(self.project_folder, self.__flight_data_gdb_name__)
+    @property
+    def planning_data_gdb_location(self):
+        return os.path.join(self.project_folder, self.__planning_data_gdb_name__)
 
     @property
     def projectconfig_json_exists(self):
@@ -197,12 +216,40 @@ class FlightlineProject(object):
     @property
     def list_tool_setting_json_files(self):
         """Searches the configs folder for .json files"""
+        tool_setting_list = []
         basefolder = os.path.join(self.project_folder,self.__config_folder_name__)
-        return [os.path.join(basefolder,i) for i in os.listdir(basefolder) if i.lower().endswith('.json')]
+        for i in os.listdir(basefolder):
+            if i.lower().endswith('.json'):
+                tool_setting_list.append(os.path.join(basefolder,i))
+        return tool_setting_list
 
     @property
     def project_folder_handler(self):
         return folder_handler.FolderHandler(self.project_folder)
+
+    def import_treatment_area_featureclass(self, featureclass):
+        """
+        Imports a feature class containing the treatment areas
+        into the projects planning.gdb
+
+        Parameters
+        ----------
+        featureclass : str - Location of featureclass
+
+        """
+
+        self.project_folder_handler.__copy_featureclass__(featureclass, self.treatment_area_fc)
+
+        field_list = featureclass_handler.get_featureclass_field_names(self.treatment_area_fc)
+
+        if 'HeliBlkNm'.lower() not in [f.lower() for f in field_list]:
+            featureclass_handler.add_field_to_featureclass(self.treatment_area_fc,
+                field_name='HeliBlkNm',
+                field_type='TEXT',
+                field_length=50)
+
+        if 'Hectares'.lower() not in [f.lower() for f in field_list]:
+            featureclass_handler.add_hectares_to_fc(self.treatment_area_fc)
 
     def __load_project_folder__(self, project_folder):
         """Checks if project_folder exists"""
@@ -227,7 +274,7 @@ class FlightlineProject(object):
         dataset_list = [os.path.join(self.flight_data_gdb_location, i) for i in self.required_flight_data_fcs ]
         featureclass_handler.rename_flight_data_datasets(self.flight_data_gdb_location, dataset_list)
 
-    def add_copied_data_to_mxd(self, mxd, df):
+    def add_copied_data_to_map(self, aprx, map_view):
         """
         Adds presaved layer files to current mxd, and updates the datasource to projects data
         if the layres are not already present
@@ -235,20 +282,22 @@ class FlightlineProject(object):
         # TODO - Remove the hardcoded layer values, use self.requried_fcs list.
         # TODO - Move this out to a new module called map_handler or into the featureclass_handler
         # there shouldn't be any reference to arcpy within this module.
-        layer_list = [lyr.dataSource for lyr in arcpy.mapping.ListLayers(mxd, '*', df) if lyr.supports("DATASOURCE")]
+        layer_list = [lyr.dataSource for lyr in map_view.listLayers() if lyr.supports("DATASOURCE")]
         check_lyr_dict = {self.total_points_fc: self.total_points_layer,
                           self.total_polygons_fc: self.total_polygons_layer,
                           self.total_lines_fc: self.total_lines_layer,
                           self.flight_path_fc: self.flight_path_layer}
 
-        for lyr in check_lyr_dict.iteritems():
-            if lyr[0] not in layer_list:
-                new_lyr = arcpy.mapping.Layer(lyr[1])
+        for fc, lyr in check_lyr_dict.items():
+            if lyr not in layer_list:
                 # Change the datasource to the current gdb
-                new_lyr.replaceDataSource(workspace_path=os.path.dirname(lyr[0]),
-                                         workspace_type="FILEGDB_WORKSPACE",
-                                         dataset_name=os.path.basename(lyr[0]))
-                arcpy.mapping.AddLayer(df, new_lyr, "TOP")
+                new_lyr = arcpy.mp.LayerFile(lyr)
+                cp = new_lyr.connectionProperties
+                cp['connection_info']['database'] = os.path.dirname(lyr)
+                cp['dataset'] = os.path.basename(lyr)
+                new_lyr.updateConnectionProperties(new_lyr.connectionProperties, cp)
+
+                map_view.addLayer(new_lyr, "TOP")
 
     def copy_tracmap_data(self, source_folder, helicopter_rego, download_time):
         """
@@ -263,15 +312,15 @@ class FlightlineProject(object):
         -------
         result : boolean
         """
-        os.chdir(self.tracmap_data_folder_location)
+
         destination_directory = os.path.join(self.tracmap_data_folder_location, helicopter_rego, download_time)
+        helicopter_directory = os.path.join(self.tracmap_data_folder_location, helicopter_rego)
         if destination_directory in self.copied_tracmap_datasets:
             return False
         self.copied_tracmap_datasets.append(destination_directory)
-        if not os.path.exists(helicopter_rego):
-            os.mkdir(helicopter_rego)
-        os.chdir(helicopter_rego)
-        if not os.path.exists(download_time):
+        if not os.path.exists(helicopter_directory):
+            os.mkdir(helicopter_directory)
+        if not os.path.exists(destination_directory):
             dir_util.copy_tree(source_folder, destination_directory)
 
         return True
@@ -377,7 +426,7 @@ class FlightlineProject(object):
         sum_totals_field_names = self.sum_total_fieldnames
         total_polygons_lyr_file = self.total_polygons_layer
 
-        block_area_dict = featureclass_handler.feature_class_as_dict(self.treatment_area_featureclass, self.__block_field_name__, ['Hectares'])
+        block_area_dict = featureclass_handler.feature_class_as_dict(self.treatment_area_fc, self.__block_field_name__, ['Hectares'])
 
         results = featureclass_handler.new_flight_data_summary(total_lines,
                                                     total_points,
@@ -412,7 +461,7 @@ class FlightlineProject(object):
 
     def get_config_attribute(self, attribute_name):
         """Retrieves the value of a attribute in __config_attributes__"""
-        if self.__config_attributes__.has_key(attribute_name):
+        if self.__config_attributes__.get(attribute_name):
             return self.__config_attributes__[attribute_name]
         else:
             raise KeyError("Attribute name: {0} not in __config_attributes__".format(attribute_name))

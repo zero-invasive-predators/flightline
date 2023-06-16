@@ -1,0 +1,19 @@
+Metadata-Version: 2.1
+Name: flightline
+Version: 0.1
+Summary: Python module to manage aerial operations using ESRI ArcMap
+Home-page: https://github.com/OSPRI-GIS/flightline
+Author: OSPRI
+Author-email: gis@ospri.co.nz
+License: GNU General Public License v3.0
+Keywords: Aerial Tracmap OSPRI
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: End Users
+Classifier: Topic :: Aerial Operational Management
+Classifier: License :: GNU General Public License v3.0
+Classifier: Programming Language :: Python :: 2.7.1
+License-File: LICENSE
+
+This module consists of a set of tools/functions to help with the management of aerial operations
+

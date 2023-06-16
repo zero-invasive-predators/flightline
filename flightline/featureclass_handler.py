@@ -220,6 +220,8 @@ def update_totallines_featureclass(total_lines_fc, total_polygons_fc, helicopter
     total_lines_fc : str - TotalLines featureclass location
     """
 
+    arcpy.env.overwriteOutput = True
+
     # Update totallines with the Machine and Download Times etc.. make sure 'Buffer' is not empty
     null_buffer = arcpy.MakeFeatureLayer_management(total_lines_fc, 'null_buffer', 'Buffer IS NULL')
     null_buffer_count = int(arcpy.GetCount_management(null_buffer).getOutput(0))
@@ -278,6 +280,8 @@ def update_totallines_featureclass(total_lines_fc, total_polygons_fc, helicopter
         arcpy.Delete_management(null_buffer)
 
         new_rows_added = int(arcpy.GetCount_management(new_row_selection).getOutput(0))
+        arcpy.Delete_management(new_row_selection)
+        arcpy.env.overwriteOutput = False
         # TODO add the count of new rows added to the tools output
         return new_rows_added
 
@@ -410,6 +414,11 @@ def convert_secondary_points_to_lines(total_points, total_lines, flight_path, op
         # TODO Add message advising number of non sowing flight lines created
         new_flight_path_rows = arcpy.MakeFeatureLayer_management(flight_path, 'new_flight_path_rows', new_row_where_clause)
         flight_path_row_count = int(arcpy.GetCount_management(new_flight_path_rows).getOutput(0))
+
+        # Cleanup
+        arcpy.Delete_management(new_lines_lyr)
+        arcpy.Delete_management(new_points_lyr)
+        arcpy.Delete_management(new_flight_path_rows)
         # TODO Add message about new rows added.
         return flight_path_row_count
 
@@ -543,7 +552,8 @@ def new_flight_data_summary(total_lines, total_points, total_polygons, tracmap_d
         arcpy.RefreshActiveView()
     except:
         arcpy.AddMessage("Refresh of total_polygons_layer did not occur, manually update symbology")
-
+    # Cleanup
+    arcpy.Delete_management(new_total_lines_lyr)
     return source_txt_file
 
 def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, sum_table_field_names):
@@ -585,12 +595,12 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
 
     # Order the sum_totals table by BlockName and Last_Log_Time and export to a csv file
     if dissolve_block_fc:
-        csv_table_field_names = sum_table_field_names
+        csv_table_field_names = sum_table_field_names[2:]
         csv_table_field_names.append('Dissolved area')
         csv_table_field_names.append('Percentage sown')
         csv_file = os.path.join(os.path.dirname(flight_data_gdb), 'sum_totals_{0}.csv'.format(str(time.strftime('%H%M'))))
         with open(csv_file, 'wb') as export_file:
-            csv_write = csv.writer(export_file, delimeter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+            csv_write = csv.writer(export_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
             csv_write.writerow(csv_table_field_names)
             with arcpy.da.SearchCursor(sum_total_rows, sum_table_field_names[2:], sql_clause=(None, 'ORDER BY BlockName, Last_log_time')) as csv_output:
                 csv_output_list = []
@@ -635,6 +645,57 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
     else:
         # TODO addwarning arcpy.AddWarning('Some of the block name fields are empty - no summary csv file created)
         pass
+
+def get_featureclass_field_names(featureclass):
+    """
+    Returns list of the featureclasses fieldnames
+
+    Parameters
+    ---------
+    featureclass : str - Location of featureclass
+
+    Returns
+    -------
+    field_names_list : list<str>
+    """
+
+    field_names = []
+
+    for i in arcpy.ListFields(featureclass):
+        field_names.append(i.name)
+
+    return field_names
+
+def featureclass_exists(featureclass):
+    """
+    Returns boolean of the existance of the featureclass
+    Parameters
+    ----------
+    featureclass : str - location of the featureclass
+
+    Returns
+    -------
+    exists : boolean
+    """
+
+    return arcpy.Exists(featureclass)
+
+def add_field_to_featureclass(featureclass, field_name, field_type, field_length=None):
+    """
+    Adds field to featureclass using arcpy.AddField_management()
+
+    Parameters
+    ----------
+    featureclass : str - Location of featureclass
+    field_type : str
+    field_length : int
+    """
+
+    arcpy.AddField_management(in_table=featureclass, field_name=field_name,
+                             field_type=field_type,
+                             field_length=field_length)
+
+
 
 
 

@@ -23,8 +23,9 @@ class Toolbox(object):
         self.tools.append(SummarizeFlightData)
         self.tools.append(CreateNewFlightDataGdb)
 
-        self.mxd = arcpy.mapping.MapDocument("CURRENT")
-        self.map_location = self.mxd.filePath
+
+        self.aprx = arcpy.mp.ArcGISProject("CURRENT")
+        self.map_location = self.aprx.filePath
         global global_flightline
         global_flightline = flightline_project.FlightlineProject(os.path.dirname(self.map_location))
 
@@ -126,11 +127,12 @@ class EnterOrUpdateOperationMetadata(object):
         self.canRunInBackground = True
         self.category = "Data Management"
 
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        mxd_path = mxd.filePath
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+        aprx_path = aprx.filePath
+
 
         global global_flightline
-        global_flightline.__load_project_folder__(os.path.dirname(mxd_path))
+        global_flightline.__load_project_folder__(os.path.dirname(aprx_path))
         if global_flightline.valid_project_folder:
             if global_flightline.projectconfig_json_exists:
                 global_flightline.load_from_projectconfig()
@@ -266,13 +268,13 @@ class CopyTracmapDataToProjectGeodatabase(object):
         self.canRunInBackground = True
         self.category = "Data Management"
 
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        mxd_path = mxd.filePath
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+        aprx_path = aprx.filePath
 
         arcpy.env.overwriteOutput = True
 
         global global_flightline
-        global_flightline.__load_project_folder__(os.path.dirname(mxd_path))
+        global_flightline.__load_project_folder__(os.path.dirname(aprx_path))
         if global_flightline.valid_project_folder:
             if global_flightline.projectconfig_json_exists:
                 global_flightline.load_from_projectconfig()
@@ -340,7 +342,7 @@ class CopyTracmapDataToProjectGeodatabase(object):
             parameterType = 'Optional',
             direction = 'Input')
         if global_flightline.valid_project_folder:
-            treatment_area_featureclass.value = global_flightline.treatment_area_featureclass
+            treatment_area_featureclass.value = global_flightline.treatment_area_fc
         # Set the filter to only accept polygon feature classes
         treatment_area_featureclass.filter.list = ['Polygon']
 
@@ -389,17 +391,10 @@ class CopyTracmapDataToProjectGeodatabase(object):
         """"
         Set whether tool is licensed to execute.
         An advanced (arcinfo) licence is required to use this tool, specifically
-        the the feature vertices to points tool used to create the secondary lines and
+        the feature vertices to points tool used to create the secondary lines and
         the ImportXMLWorkspaceDocument_management function used to add the empty feature classes
         and tables to the new file geodatabase or new fc's and tables to an existing file geodatabase
         """
-        return True
-
-        try:
-            if arcpy.ProductInfo() <> 'ArcInfo':
-                raise Exception
-        except Exception:
-            return False
         return True
 
     def updateParameters(self, parameters):
@@ -435,8 +430,9 @@ class CopyTracmapDataToProjectGeodatabase(object):
         download_time = parameters[6].valueAsText
         deflector_chkbx = parameters[7].value
 
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        df = arcpy.mapping.ListDataFrames(mxd, "*")[0]
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+        map_view = aprx.listMaps('Map')[0]
+
         sum_total_fieldnames = global_flightline.sum_total_fieldnames
 
         arcpy.env.geographicTransformations = 'NZGD_2000_To_WGS_1984_1'
@@ -448,7 +444,7 @@ class CopyTracmapDataToProjectGeodatabase(object):
             arcpy.AddError("{0} already exists, change download time".format(os.path.join(global_flightline.tracmap_data_folder_location, helicopter_rego, download_time)))
 
         # Add layer files to current map document
-        global_flightline.add_copied_data_to_mxd(mxd, df)
+        global_flightline.add_copied_data_to_map(aprx, map_view)
 
         # Copy new rows in the log shapefiles to the totalLines feature class
         global_flightline.merge_tracmap_data_to_flight_data_gdb('log.shp',
@@ -497,12 +493,13 @@ class SummarizeFlightData(object):
         self.description = "Summarizes the flight data"
         self.canRunInBackground = True
         self.category = "Data Management"
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        mxd_path = mxd.filePath
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+        aprx_path = aprx.filePath
+
         arcpy.env.overwriteOutput = True
 
         global global_flightline
-        global_flightline.__load_project_folder__(os.path.dirname(mxd_path))
+        global_flightline.__load_project_folder__(os.path.dirname(aprx_path))
         if global_flightline.projectconfig_json_exists:
             global_flightline.load_from_projectconfig()
 
@@ -567,10 +564,10 @@ class SummarizeFlightData(object):
     def execute(self, parameters, messages):
         """The source code of the tool"""
 
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        df = arcpy.mapping.ListDataFrames(mxd, "*")[0]
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+        map_view = aprx.listMaps('Map')[0]
 
-        global_flightline.summarize_flight_data(df)
+        global_flightline.summarize_flight_data(map_view)
 
         return
 
@@ -586,12 +583,13 @@ class CreateNewFlightDataGdb(object):
         self.description = "Creates a new flightdata gdb with the required schema"
         self.canRunInBackground = True
         self.category = "Project Setup"
-        mxd = arcpy.mapping.MapDocument("CURRENT")
-        mxd_path = mxd.filePath
+        aprx = arcpy.mp.ArcGISProject("CURRENT")
+
+        aprx_path = aprx.filePath
         arcpy.env.overwriteOutput = True
 
         global global_flightline
-        global_flightline.__load_project_folder__(os.path.dirname(mxd_path))
+        global_flightline.__load_project_folder__(os.path.dirname(aprx_path))
         if global_flightline.projectconfig_json_exists:
             global_flightline.load_from_projectconfig()
 
