@@ -568,6 +568,8 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
     -------
 
     """
+    aprx = arcpy.mp.ArcGISProject("CURRENT")
+    map_view = aprx.listMaps('Map')[0]
 
     with arcpy.da.SearchCursor(total_polygons, ['BlockName']) as check_block_name:
         check_block_list = []
@@ -577,9 +579,7 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
             dissolve_block_fc = os.path.join(flight_data_gdb, 'dissolved_by_block_{0}'.format(str(time.strftime('%m%d%H%M'))))
             arcpy.Dissolve_management(total_polygons, dissolve_block_fc, 'BlockName')
             add_hectares_to_fc(dissolve_block_fc)
-            dissolved_block_fc_lyr = arcpy.mapping.Layer(dissolve_block_fc)
-            arcpy.mapping.AddLayer(df, dissolved_block_fc_lyr)
-
+            map_view.addDataFromPath(dissolve_block_fc)
             # TODO add message arcpy.AddMessage(dissolved_block_fc + ' created and added to map')
         else:
             dissolve_block_fc = False
@@ -589,8 +589,7 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
     dissolved_total_polygon_fc = os.path.join(flight_data_gdb, 'total_dissolved_{0}'.format(str(time.strftime('%m%d%H%M'))))
     arcpy.Dissolve_management(total_polygons, dissolved_total_polygon_fc)
     add_hectares_to_fc(dissolved_total_polygon_fc)
-    dissolved_total_polygon_fc_lyr = arcpy.mapping.Layer(dissolved_total_polygon_fc)
-    arcpy.mapping.AddLayer(df, dissolved_total_polygon_fc_lyr)
+    map_view.addDataFromPath(dissolved_total_polygon_fc)
     # TODO add message arcpy.AddMessage(dissolved_total_polygon_fc + ' created and added to map')
 
     # Order the sum_totals table by BlockName and Last_Log_Time and export to a csv file
@@ -599,7 +598,7 @@ def summarize_flight_data(flight_data_gdb, total_polygons, sum_total_rows, df, s
         csv_table_field_names.append('Dissolved area')
         csv_table_field_names.append('Percentage sown')
         csv_file = os.path.join(os.path.dirname(flight_data_gdb), 'sum_totals_{0}.csv'.format(str(time.strftime('%H%M'))))
-        with open(csv_file, 'wb') as export_file:
+        with open(csv_file, 'w') as export_file:
             csv_write = csv.writer(export_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
             csv_write.writerow(csv_table_field_names)
             with arcpy.da.SearchCursor(sum_total_rows, sum_table_field_names[2:], sql_clause=(None, 'ORDER BY BlockName, Last_log_time')) as csv_output:
