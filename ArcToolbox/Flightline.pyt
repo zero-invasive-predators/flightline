@@ -335,18 +335,6 @@ class CopyTracmapDataToProjectGeodatabase(object):
         flightline_gdb.filter.list = ["Local Database"]
 
         # parameter 4
-        treatment_area_featureclass = arcpy.Parameter(
-            displayName = 'Feature class containing the treatment area blocks',
-            name = 'treatment_area_featureclass',
-            datatype = 'DEFeatureClass',
-            parameterType = 'Optional',
-            direction = 'Input')
-        if global_flightline.valid_project_folder:
-            treatment_area_featureclass.value = global_flightline.treatment_area_fc
-        # Set the filter to only accept polygon feature classes
-        treatment_area_featureclass.filter.list = ['Polygon']
-
-        # parameter 5
         helicopter_reg_number = arcpy.Parameter(
             displayName = 'Helicopter Reg No',
             name = 'helicopter_reg_no',
@@ -356,7 +344,7 @@ class CopyTracmapDataToProjectGeodatabase(object):
         if global_flightline.valid_project_folder:
             helicopter_reg_number.filter.list = sorted(global_flightline.helicopter_regno_list)
 
-        # parameter 6
+        # parameter 5
         download_time = arcpy.Parameter(
             displayName = 'Download time (defaults to current time)',
             name = 'download_time',
@@ -365,7 +353,7 @@ class CopyTracmapDataToProjectGeodatabase(object):
             direction = 'Input')
         download_time.value = time.strftime('%H%M')
 
-        # parameter 7
+        # parameter 6
         deflector_chkbox = arcpy.Parameter(
             displayName = 'Deflector bucket in use - this bucket spreads bait to the right side only',
             name = 'deflector_chkbox',
@@ -379,10 +367,9 @@ class CopyTracmapDataToProjectGeodatabase(object):
         parameters.append(tracmap_coordinate_system) # Parameter 1
         parameters.append(destination_parent_directory) # Parameter 2
         parameters.append(flightline_gdb) # Parameter 3
-        parameters.append(treatment_area_featureclass) # Parameter 4
-        parameters.append(helicopter_reg_number) # Parameter 5
-        parameters.append(download_time) # Parameter 6
-        parameters.append(deflector_chkbox) # Parameter 7
+        parameters.append(helicopter_reg_number) # Parameter 4
+        parameters.append(download_time) # Parameter 5
+        parameters.append(deflector_chkbox) # Parameter 6
 
         return parameters
 
@@ -422,13 +409,12 @@ class CopyTracmapDataToProjectGeodatabase(object):
         coordinate_system_text = parameters[1].value
         coordinate_system = arcpy.SpatialReference(text="{0}".format(coordinate_system_text))
         global_flightline.__tracmap_data_projection__ = coordinate_system.factoryCode
-        global_flightline.treatment_area_featureclass = parameters[4].valueAsText
 
         destination_tracmap_directory = global_flightline.tracmap_data_folder_location
 
-        helicopter_rego = parameters[5].valueAsText
-        download_time = parameters[6].valueAsText
-        deflector_chkbx = parameters[7].value
+        helicopter_rego = parameters[4].valueAsText
+        download_time = parameters[5].valueAsText
+        deflector_chkbx = parameters[6].value
 
         aprx = arcpy.mp.ArcGISProject("CURRENT")
         map_view = aprx.listMaps('Map')[0]
@@ -469,7 +455,7 @@ class CopyTracmapDataToProjectGeodatabase(object):
         arcpy.AddMessage("{0} new reocrds added from {1}".format(records_added, source_directory))
 
         # Summarize new flight data
-        summary_result = global_flightline.summarize_new_flight_data(helicopter_rego, download_time, df)
+        summary_result = global_flightline.summarize_new_flight_data(helicopter_rego, download_time, map_view)
 
         if summary_result:
             arcpy.AddMessage("Summary Results Calculated and added to {0}.\n{1} created".format(global_flightline.flightline_sum_totals_table, summary_result))
@@ -614,9 +600,21 @@ class CreateNewFlightDataGdb(object):
             parameterType = 'Required',
             direction = 'Input')
 
+        # parameter 2
+        treatment_area_featureclass = arcpy.Parameter(
+            displayName = 'Feature class containing the treatment area blocks',
+            name = 'treatment_area_featureclass',
+            datatype = 'DEFeatureClass',
+            parameterType = 'Required',
+            direction = 'Input')
+
+        # Set the filter to only accept polygon feature classes
+        treatment_area_featureclass.filter.list = ['Polygon']
+
         parameters = []
         parameters.append(project_directory)
         parameters.append(new_gdb_name)
+        parameters.append(treatment_area_featureclass)
         return parameters
 
     def isLicensed(self):
@@ -655,12 +653,14 @@ class CreateNewFlightDataGdb(object):
 
         project_directory = parameters[0].valueAsText
         new_gdb_name = parameters[1].valueAsText + '.gdb'
+        treatment_area_featureclass = parameters[2].valueAsText
 
 
         global_flightline.add_new_flight_data_gdb_name(new_gdb_name)
 
         # Create new gdb and generate required tables/featureclasses
         global_flightline.create_flight_data_gdb(new_gdb_name)
+        global_flightline.import_treatment_area_featureclass(treatment_area_featureclass)
 
         # Any time a field is changed, update the projectconfig.json
         global_flightline.dump_to_projectconfig()

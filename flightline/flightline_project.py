@@ -26,7 +26,6 @@ class FlightlineProject(object):
         self.__tracmap_data_folder_name__ = 'raw_data'
         self.__config_attributes__ = {}
         self.__flight_data_gdb_name__ = "FlightData.gdb"
-        self.__planning_data_gdb_name__ = "Planning.gdb"
         self.__operation_times_table_name__ = "operation_start_end_time"
         self.__operation_start_times_table_field_name__ = "Operation_Start_Time"
         self.__helicopter_info_table_name__ = "helicopter_info"
@@ -122,7 +121,7 @@ class FlightlineProject(object):
         return os.path.join(self.flight_data_gdb_location, self.__flight_path_fc_name__)
     @property
     def treatment_area_fc(self):
-        return os.path.join(self.planning_data_gdb_location, self.__treatment_area_fc_name__)
+        return os.path.join(self.flight_data_gdb_location, self.__treatment_area_fc_name__)
     @property
     def total_points_layer(self):
         return os.path.join(self.maps_folder_location, self.__total_points_lyr_name__)
@@ -188,9 +187,6 @@ class FlightlineProject(object):
     @property
     def flight_data_gdb_location(self):
         return os.path.join(self.project_folder, self.__flight_data_gdb_name__)
-    @property
-    def planning_data_gdb_location(self):
-        return os.path.join(self.project_folder, self.__planning_data_gdb_name__)
 
     @property
     def projectconfig_json_exists(self):
@@ -292,10 +288,11 @@ class FlightlineProject(object):
             if lyr not in layer_list:
                 # Change the datasource to the current gdb
                 new_lyr = arcpy.mp.LayerFile(lyr)
-                cp = new_lyr.connectionProperties
+                cp = {'connection_info':{}}
+                cp['dataset'] = os.path.basename(fc)
+                cp['workspace_factory'] = 'File Geodatabase'
                 cp['connection_info']['database'] = os.path.dirname(lyr)
-                cp['dataset'] = os.path.basename(lyr)
-                new_lyr.updateConnectionProperties(new_lyr.connectionProperties, cp)
+                new_lyr.updateConnectionProperties(current_connection_info=None, new_connection_info=cp)
 
                 map_view.addLayer(new_lyr, "TOP")
 
@@ -413,7 +410,7 @@ class FlightlineProject(object):
 
         self.csv_summaries.append(results)
 
-    def summarize_new_flight_data(self, helicopter_rego, download_time, df):
+    def summarize_new_flight_data(self, helicopter_rego, download_time, map_view):
         """
         For newly added tracmap data this creaes a summary.txt file and
         adds a new record to the sum_totals_table
@@ -437,7 +434,7 @@ class FlightlineProject(object):
                                                     sum_totals_table,
                                                     sum_totals_field_names,
                                                     block_area_dict,
-                                                    df,
+                                                    map_view,
                                                     total_polygons_lyr_file)
 
         if results:

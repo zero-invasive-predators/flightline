@@ -317,7 +317,7 @@ def update_totalpoints_featureclass(total_points_fc, helicopter_rego, download_t
 def convert_secondary_points_to_lines(total_points, total_lines, flight_path, operation_start_time_table, helicopter_rego, download_time):
     """
     Converts secondary points to lines
-    This is a mega method and shold be broken down into managible chunks.
+    This is a mega method and should be broken down into manageable chunks.
     """
 
     # Setup variables
