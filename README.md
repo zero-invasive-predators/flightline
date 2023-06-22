@@ -1,7 +1,7 @@
 # Flightline
 Set of tools to help with Aerial Operation Projects using arcpy
 
-### Summary1
+### Summary
 The aim is to have as many configurations stored in .xml/json files so that making changes based on a local environment
 is easier.
 When begining, a user creates a folder that defines their project, from here the tools will generate and
